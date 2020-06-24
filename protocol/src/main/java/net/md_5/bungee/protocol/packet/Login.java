@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 import net.md_5.bungee.protocol.AbstractPacketHandler;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.ProtocolConstants;
+import net.md_5.bungee.protocol.registry.DimensionTypeRegistry;
 import se.llbit.nbt.NamedTag;
-import se.llbit.nbt.Tag;
 
 @Data
 @NoArgsConstructor
@@ -30,7 +30,7 @@ public class Login extends DefinedPacket
     private short gameMode;
     private short previousGameMode;
     private Set<String> worldNames;
-    private Tag dimensions;
+    private DimensionTypeRegistry dimensionTypeRegistry;
     private Object dimension;
     private String worldName;
     private long seed;
@@ -43,6 +43,8 @@ public class Login extends DefinedPacket
     private boolean debug;
     private boolean flat;
 
+    public static final String FAKE_SWITCH_LEVELNAME = "bungeecord:serverswitch";
+
     @Override
     public void read(ByteBuf buf, ProtocolConstants.Direction direction, int protocolVersion)
     {
@@ -51,7 +53,6 @@ public class Login extends DefinedPacket
         if ( protocolVersion >= ProtocolConstants.MINECRAFT_1_16 )
         {
             previousGameMode = buf.readUnsignedByte();
-
             worldNames = new HashSet<>();
             int worldCount = readVarInt( buf );
             Preconditions.checkArgument( worldCount < 128, "Too many worlds %s", worldCount );
@@ -60,13 +61,10 @@ public class Login extends DefinedPacket
             {
                 worldNames.add( readString( buf ) );
             }
+            NamedTag registry = (NamedTag) NamedTag.read( new DataInputStream( new ByteBufInputStream( buf ) ) );
+            Preconditions.checkArgument( !registry.isError(), "Error reading dimensions: %s", registry.error() );
+            dimensionTypeRegistry = DimensionTypeRegistry.fromGameData( registry );
 
-            dimensions = NamedTag.read( new DataInputStream( new ByteBufInputStream( buf ) ) );
-            Preconditions.checkArgument( !dimensions.isError(), "Error reading dimensions: %s", dimensions.error() );
-        }
-
-        if ( protocolVersion >= ProtocolConstants.MINECRAFT_1_16 )
-        {
             dimension = readString( buf );
             worldName = readString( buf );
         } else if ( protocolVersion > ProtocolConstants.MINECRAFT_1_9 )
@@ -116,24 +114,24 @@ public class Login extends DefinedPacket
         if ( protocolVersion >= ProtocolConstants.MINECRAFT_1_16 )
         {
             buf.writeByte( previousGameMode );
-
-            writeVarInt( worldNames.size(), buf );
+            boolean containsFakeSwitch = worldNames.contains( FAKE_SWITCH_LEVELNAME );
+            writeVarInt( containsFakeSwitch ? worldNames.size() : worldNames.size() + 1, buf );
             for ( String world : worldNames )
             {
                 writeString( world, buf );
             }
+            if ( !containsFakeSwitch )
+            {
+                writeString( FAKE_SWITCH_LEVELNAME, buf );
+            }
 
             try
             {
-                dimensions.write( new DataOutputStream( new ByteBufOutputStream( buf ) ) );
+                dimensionTypeRegistry.encodeRegistry().write( new DataOutputStream( new ByteBufOutputStream( buf ) ) );
             } catch ( IOException ex )
             {
                 throw new RuntimeException( "Exception writing dimensions", ex );
             }
-        }
-
-        if ( protocolVersion >= ProtocolConstants.MINECRAFT_1_16 )
-        {
             writeString( (String) dimension, buf );
             writeString( worldName, buf );
         } else if ( protocolVersion > ProtocolConstants.MINECRAFT_1_9 )

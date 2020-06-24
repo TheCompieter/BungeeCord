@@ -212,7 +212,7 @@ public class ServerConnector extends PacketHandler
             user.setServerEntityId( login.getEntityId() );
 
             // Set tab list size, TODO: what shall we do about packet mutability
-            Login modLogin = new Login( login.getEntityId(), login.getGameMode(), login.getPreviousGameMode(), login.getWorldNames(), login.getDimensions(), login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(),
+            Login modLogin = new Login( login.getEntityId(), login.getGameMode(), login.getPreviousGameMode(), login.getWorldNames(), login.getDimensionTypeRegistry(), login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(),
                     (byte) user.getPendingConnection().getListener().getTabListSize(), login.getLevelType(), login.getViewDistance(), login.isReducedDebugInfo(), login.isNormalRespawn(), login.isDebug(), login.isFlat() );
 
             user.unsafe().sendPacket( modLogin );
@@ -223,62 +223,76 @@ public class ServerConnector extends PacketHandler
             brand.release();
 
             user.setDimension( login.getDimension() );
+            user.setCurrentRegistry( login.getDimensionTypeRegistry() );
+            user.setCurrentWorldNames( login.getWorldNames() );
         } else
         {
             user.getServer().setObsolete( true );
             user.getTabListHandler().onServerChange();
-
-            Scoreboard serverScoreboard = user.getServerSentScoreboard();
-            for ( Objective objective : serverScoreboard.getObjectives() )
+            user.setServerEntityId( login.getEntityId() );
+            // Fast-switching exclusion:
+            if ( login.getDimensionTypeRegistry() != null
+                    && !login.getDimensionTypeRegistry().equals( user.getCurrentRegistry() )
+                    && !login.getWorldNames().equals( user.getCurrentWorldNames() )
+            )
             {
-                user.unsafe().sendPacket( new ScoreboardObjective( objective.getName(), objective.getValue(), ScoreboardObjective.HealthDisplay.fromString( objective.getType() ), (byte) 1 ) );
-            }
-            for ( Score score : serverScoreboard.getScores() )
+                Login modLogin = new Login( login.getEntityId(), login.getGameMode(), login.getPreviousGameMode(), login.getWorldNames(), login.getDimensionTypeRegistry(), login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(),
+                        (byte) user.getPendingConnection().getListener().getTabListSize(), login.getLevelType(), login.getViewDistance(), login.isReducedDebugInfo(), login.isNormalRespawn(), login.isDebug(), login.isFlat() );
+                user.unsafe().sendPacket( modLogin );
+                user.unsafe().sendPacket( new Respawn( login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), false ) );
+                user.setCurrentRegistry( login.getDimensionTypeRegistry() );
+                user.setCurrentWorldNames( login.getWorldNames() );
+            } else
             {
-                user.unsafe().sendPacket( new ScoreboardScore( score.getItemName(), (byte) 1, score.getScoreName(), score.getValue() ) );
-            }
-            for ( Team team : serverScoreboard.getTeams() )
-            {
-                user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.Team( team.getName() ) );
-            }
-            serverScoreboard.clear();
-
-            for ( UUID bossbar : user.getSentBossBars() )
-            {
-                // Send remove bossbar packet
-                user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.BossBar( bossbar, 1 ) );
-            }
-            user.getSentBossBars().clear();
-
-            // Update debug info from login packet
-            user.unsafe().sendPacket( new EntityStatus( user.getClientEntityId(), login.isReducedDebugInfo() ? EntityStatus.DEBUG_INFO_REDUCED : EntityStatus.DEBUG_INFO_NORMAL ) );
-            // And immediate respawn
-            if ( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_15 )
-            {
-                user.unsafe().sendPacket( new GameState( GameState.IMMEDIATE_RESPAWN, login.isNormalRespawn() ? 0 : 1 ) );
-            }
-
-            user.setDimensionChange( true );
-            if ( login.getDimension().equals( user.getDimension() ) )
-            {
-                Object newDim;
-                String worldName = login.getWorldName();
-                if ( login.getDimension() instanceof Integer )
+                Scoreboard serverScoreboard = user.getServerSentScoreboard();
+                for ( Objective objective : serverScoreboard.getObjectives() )
                 {
-                    newDim = ( (Integer) login.getDimension() >= 0 ? -1 : 0 );
-                } else
+                    user.unsafe().sendPacket( new ScoreboardObjective( objective.getName(), objective.getValue(), ScoreboardObjective.HealthDisplay.fromString( objective.getType() ), (byte) 1 ) );
+                }
+                for ( Score score : serverScoreboard.getScores() )
                 {
-                    newDim = worldName = ( "minecraft:overworld".equals( (String) login.getDimension() ) ) ? "minecraft:the_nether" : "minecraft:overworld";
+                    user.unsafe().sendPacket( new ScoreboardScore( score.getItemName(), (byte) 1, score.getScoreName(), score.getValue() ) );
+                }
+                for ( Team team : serverScoreboard.getTeams() )
+                {
+                    user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.Team( team.getName() ) );
+                }
+                serverScoreboard.clear();
+
+                for ( UUID bossbar : user.getSentBossBars() )
+                {
+                    // Send remove bossbar packet
+                    user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.BossBar( bossbar, 1 ) );
+                }
+                user.getSentBossBars().clear();
+
+                // Update debug info from login packet
+                user.unsafe().sendPacket( new EntityStatus( user.getClientEntityId(), login.isReducedDebugInfo() ? EntityStatus.DEBUG_INFO_REDUCED : EntityStatus.DEBUG_INFO_NORMAL ) );
+                // And immediate respawn
+                if ( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_15 )
+                {
+                    user.unsafe().sendPacket( new GameState( GameState.IMMEDIATE_RESPAWN, login.isNormalRespawn() ? 0 : 1 ) );
                 }
 
-                user.unsafe().sendPacket( new Respawn( newDim, worldName, login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), false ) );
-            }
+                user.setDimensionChange( true );
+                if ( ( login.getDimension() instanceof Integer && login.getDimension() == user.getDimension() ) || login.getDimensionTypeRegistry() != null )
+                {
+                    Object dimension;
+                    if ( login.getDimension() instanceof String )
+                    {
+                        dimension = login.getDimension();
+                    } else
+                    {
+                        dimension = (Integer) login.getDimension() >= 0 ? -1 : 0;
+                    }
+                    user.unsafe().sendPacket( new Respawn( dimension, Login.FAKE_SWITCH_LEVELNAME, login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), false ) );
+                }
 
-            user.setServerEntityId( login.getEntityId() );
-            user.unsafe().sendPacket( new Respawn( login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), false ) );
-            if ( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_14 )
-            {
-                user.unsafe().sendPacket( new ViewDistance( login.getViewDistance() ) );
+                user.unsafe().sendPacket( new Respawn( login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), false ) );
+                if ( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_14 )
+                {
+                    user.unsafe().sendPacket( new ViewDistance( login.getViewDistance() ) );
+                }
             }
             user.setDimension( login.getDimension() );
 

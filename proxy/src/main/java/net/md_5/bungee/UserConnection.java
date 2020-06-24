@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import lombok.Getter;
@@ -59,6 +60,7 @@ import net.md_5.bungee.protocol.packet.Kick;
 import net.md_5.bungee.protocol.packet.PlayerListHeaderFooter;
 import net.md_5.bungee.protocol.packet.PluginMessage;
 import net.md_5.bungee.protocol.packet.SetCompression;
+import net.md_5.bungee.protocol.registry.DimensionTypeRegistry;
 import net.md_5.bungee.tab.ServerUnique;
 import net.md_5.bungee.tab.TabList;
 import net.md_5.bungee.util.CaseInsensitiveSet;
@@ -136,6 +138,13 @@ public final class UserConnection implements ProxiedPlayer
     @Getter
     @Setter
     private ForgeServerHandler forgeServerHandler;
+    /*========================================================================*/
+    @Getter
+    @Setter
+    private Set<String> currentWorldNames;
+    @Getter
+    @Setter
+    private DimensionTypeRegistry currentRegistry;
     /*========================================================================*/
     private final Unsafe unsafe = new Unsafe()
     {
