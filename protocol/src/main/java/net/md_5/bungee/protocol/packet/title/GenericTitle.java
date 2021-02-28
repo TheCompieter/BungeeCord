@@ -1,22 +1,19 @@
-package net.md_5.bungee.protocol.packet;
+package net.md_5.bungee.protocol.packet.title;
 
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import net.md_5.bungee.protocol.AbstractPacketHandler;
-import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.ProtocolConstants;
 
 @Data
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-public class Title extends DefinedPacket
+@EqualsAndHashCode(callSuper = true)
+public class GenericTitle extends Title
 {
 
-    private Action action;
-
-    // TITLE & SUBTITLE
+    // TITLE, SUBTITLE & ACTIONBAR
     private String text;
 
     // TIMES
@@ -84,14 +81,4 @@ public class Title extends DefinedPacket
         handler.handle( this );
     }
 
-    public static enum Action
-    {
-
-        TITLE,
-        SUBTITLE,
-        ACTIONBAR,
-        TIMES,
-        CLEAR,
-        RESET
-    }
 }

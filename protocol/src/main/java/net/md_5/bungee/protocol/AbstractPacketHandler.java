@@ -33,8 +33,13 @@ import net.md_5.bungee.protocol.packet.StatusResponse;
 import net.md_5.bungee.protocol.packet.TabCompleteRequest;
 import net.md_5.bungee.protocol.packet.TabCompleteResponse;
 import net.md_5.bungee.protocol.packet.Team;
-import net.md_5.bungee.protocol.packet.Title;
 import net.md_5.bungee.protocol.packet.ViewDistance;
+import net.md_5.bungee.protocol.packet.title.GenericTitle;
+import net.md_5.bungee.protocol.packet.title.TitleActionBar;
+import net.md_5.bungee.protocol.packet.title.TitleClearAndReset;
+import net.md_5.bungee.protocol.packet.title.TitleSubtitle;
+import net.md_5.bungee.protocol.packet.title.TitleText;
+import net.md_5.bungee.protocol.packet.title.TitleTimes;
 
 public abstract class AbstractPacketHandler
 {
@@ -123,7 +128,27 @@ public abstract class AbstractPacketHandler
     {
     }
 
-    public void handle(Title title) throws Exception
+    public void handle(GenericTitle title) throws Exception
+    {
+    }
+
+    public void handle(TitleText title) throws Exception
+    {
+    }
+
+    public void handle(TitleSubtitle title) throws Exception
+    {
+    }
+
+    public void handle(TitleActionBar title) throws Exception
+    {
+    }
+
+    public void handle(TitleTimes title) throws Exception
+    {
+    }
+
+    public void handle(TitleClearAndReset title) throws Exception
     {
     }
 

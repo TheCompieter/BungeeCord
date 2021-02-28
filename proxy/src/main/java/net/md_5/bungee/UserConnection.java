@@ -484,10 +484,10 @@ public final class UserConnection implements ProxiedPlayer
                 sendMessage( position, sender, ComponentSerializer.toString( new TextComponent( BaseComponent.toLegacyText( message ) ) ) );
             } else
             {
-                net.md_5.bungee.protocol.packet.Title title = new net.md_5.bungee.protocol.packet.Title();
-                title.setAction( net.md_5.bungee.protocol.packet.Title.Action.ACTIONBAR );
+                net.md_5.bungee.protocol.packet.title.Title.Builder title = new net.md_5.bungee.protocol.packet.title.Title.Builder();
+                title.setAction( net.md_5.bungee.protocol.packet.title.Title.Action.ACTIONBAR );
                 title.setText( ComponentSerializer.toString( message ) );
-                unsafe.sendPacket( title );
+                unsafe.sendPacket( title.build( getPendingConnection().getVersion() ) );
             }
         } else
         {

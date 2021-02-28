@@ -4,17 +4,16 @@ import net.md_5.bungee.api.Title;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.chat.ComponentSerializer;
-import net.md_5.bungee.protocol.DefinedPacket;
-import net.md_5.bungee.protocol.packet.Title.Action;
+import net.md_5.bungee.protocol.packet.title.Title.Action;
 
 public class BungeeTitle implements Title
 {
 
-    private net.md_5.bungee.protocol.packet.Title title, subtitle, times, clear, reset;
+    private net.md_5.bungee.protocol.packet.title.Title.Builder title, subtitle, times, clear, reset;
 
-    private static net.md_5.bungee.protocol.packet.Title createPacket(Action action)
+    private static net.md_5.bungee.protocol.packet.title.Title.Builder createPacket(Action action)
     {
-        net.md_5.bungee.protocol.packet.Title title = new net.md_5.bungee.protocol.packet.Title();
+        net.md_5.bungee.protocol.packet.title.Title.Builder title = new net.md_5.bungee.protocol.packet.title.Title.Builder();
         title.setAction( action );
 
         if ( action == Action.TIMES )
@@ -140,11 +139,11 @@ public class BungeeTitle implements Title
         return this;
     }
 
-    private static void sendPacket(ProxiedPlayer player, DefinedPacket packet)
+    private static void sendPacket(ProxiedPlayer player, net.md_5.bungee.protocol.packet.title.Title.Builder packet)
     {
         if ( packet != null )
         {
-            player.unsafe().sendPacket( packet );
+            player.unsafe().sendPacket( packet.build( player.getPendingConnection().getVersion() ) );
         }
     }
 
