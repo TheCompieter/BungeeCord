@@ -45,7 +45,7 @@ public class ProtocolConstants
             "1.14.x",
             "1.15.x",
             "1.16.x",
-            "1.17.x"
+            "1.17.x (21w08b)"
     );
     public static final List<Integer> SUPPORTED_VERSION_IDS = Arrays.asList(
             ProtocolConstants.MINECRAFT_1_8,
